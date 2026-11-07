@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการเงินออม (สำหรับคุณครู) - กระปุกออมสินห้องเรียน ป.5</title>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f1f5f9;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-30 border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <!-- Brand -->
+            <div class="flex items-center gap-3">
+                <img src="https://lh3.googleusercontent.com/d/1NbU2c5uZWIZaAxtrjRVa53LL_U7LnTeB" alt="ตราโรงเรียน" class="w-11 h-11 sm:w-12 sm:h-12 object-contain drop-shadow-sm">
+                <div>
+                    <h1 class="font-bold text-base sm:text-xl text-slate-800 leading-tight">กระปุกออมสินห้องเรียน ป.5</h1>
+                    <p class="text-xs text-indigo-600 font-medium">ระบบบริหารจัดการสำหรับคุณครูประจำชั้น</p>
+                </div>
+            </div>
+
+            <!-- Status & Teacher Profile -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div id="db-status-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-slate-400"></span> รอการเชื่อมต่อ...
+                </div>
+                <button id="btn-logout-teacher" onclick="logoutTeacher()" class="hidden px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5">
+                    <i class="ph-bold ph-sign-out"></i> ออกจากระบบ
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-4 py-5 sm:py-6">
+
+        <!-- ========================================== -->
+        <!-- 1. หน้าล็อกอินคุณครู (TEACHER LOGIN)          -->
+        <!-- ========================================== -->
+        <section id="teacher-login-section" class="max-w-md mx-auto mt-4 sm:mt-8">
+            <div class="bg-white rounded-3xl shadow-xl border border-indigo-100 overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-500 p-6 text-center text-white relative">
+                    <div class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm mx-auto flex items-center justify-center text-4xl mb-3 shadow-inner">
+                        👩‍🏫
+                    </div>
+                    <h2 class="text-2xl font-bold">เข้าสู่ระบบสำหรับคุณครู</h2>
+                    <p class="text-indigo-100 text-sm mt-1">นางสาวปรารถนา สุวรรณพันธ์</p>
+                </div>
+
+                <form onsubmit="event.preventDefault(); loginTeacher();" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้งาน (User)</label>
+                        <div class="relative">
+                            <i class="ph ph-user-circle absolute left-3.5 top-3 text-slate-400 text-lg"></i>
+                            <input type="text" id="teacher-user-input" placeholder="กรอกรหัสผู้ใช้งาน (เช่น 190143)" required
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-medium text-base">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+                        <div class="relative">
+                            <i class="ph ph-lock-key absolute left-3.5 top-3 text-slate-400 text-lg"></i>
+                            <input type="password" id="teacher-pass-input" placeholder="กรอกรหัสผ่าน" required
+                                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white font-bold tracking-widest text-base">
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center justify-center gap-2 text-lg">
+                            <i class="ph-bold ph-sign-in"></i> เข้าสู่ระบบจัดการเงินออม
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 2. หน้าแดชบอร์ดจัดการของคุณครู (DASHBOARD)     -->
+        <!-- ========================================== -->
+        <section id="teacher-dashboard-section" class="hidden space-y-6">
+
+            <!-- Welcome Banner & Quick Actions -->
+            <div class="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200/80 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-inner">
+                        👩‍🏫
+                    </div>
+                    <div>
+                        <span class="px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">ครูผู้ดูแลระบบ</span>
+                        <h2 class="text-lg sm:text-xl font-bold text-slate-800 mt-0.5">คุณครูปรารถนา สุวรรณพันธ์</h2>
+                        <p class="text-xs text-slate-500">กระปุกออมสินห้องเรียน ป.5</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button onclick="connectSupabase()" class="flex-1 sm:flex-initial justify-center px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5">
+                        <i class="ph-bold ph-arrows-clockwise"></i> รีเฟรชข้อมูล
+                    </button>
+                    <button onclick="openWithdrawModal()" class="flex-1 sm:flex-initial justify-center px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs sm:text-sm font-bold transition flex items-center gap-1.5">
+                        <i class="ph-bold ph-hand-withdraw"></i> ถอนเงินนักเรียน
+                    </button>
+                    <button onclick="openStudentModal()" class="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center gap-1.5">
+                        <i class="ph-bold ph-user-plus"></i> เพิ่มนักเรียนใหม่
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4 Summary Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-200/70">
+                    <div class="flex items-center justify-between text-slate-400 text-xs font-semibold">
+                        <span>ยอดเงินออมรวมทั้งห้อง</span>
+                        <i class="ph-fill ph-piggy-bank text-indigo-500 text-xl"></i>
+                    </div>
+                    <p id="stat-total-balance" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-2">0 ฿</p>
+                    <p id="stat-student-count" class="text-xs text-slate-500 mt-1">นักเรียนทั้งหมด 0 คน</p>
+                </div>
+
+                <div class="bg-emerald-50/90 p-4 sm:p-5 rounded-3xl shadow-sm border border-emerald-200">
+                    <div class="flex items-center justify-between text-emerald-700 text-xs font-semibold">
+                        <span>รับฝากวันนี้</span>
+                        <i class="ph-fill ph-trend-up text-emerald-600 text-xl"></i>
+                    </div>
+                    <p id="stat-today-deposit" class="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-2">+0 ฿</p>
+                    <p id="stat-today-dep-count" class="text-xs text-emerald-600 mt-1">0 รายการวันนี้</p>
+                </div>
+
+                <div class="bg-rose-50/90 p-4 sm:p-5 rounded-3xl shadow-sm border border-rose-200">
+                    <div class="flex items-center justify-between text-rose-700 text-xs font-semibold">
+                        <span>ถอนเงินวันนี้</span>
+                        <i class="ph-fill ph-trend-down text-rose-600 text-xl"></i>
+                    </div>
+                    <p id="stat-today-withdraw" class="text-2xl sm:text-3xl font-extrabold text-rose-700 mt-2">-0 ฿</p>
+                    <p id="stat-today-wit-count" class="text-xs text-rose-600 mt-1">0 รายการวันนี้</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-indigo-600 to-blue-600 p-4 sm:p-5 rounded-3xl shadow-md text-white">
+                    <div class="flex items-center justify-between text-indigo-100 text-xs font-semibold">
+                        <span>เงินสดสุทธิในมือครูวันนี้</span>
+                        <i class="ph-fill ph-wallet text-amber-300 text-xl"></i>
+                    </div>
+                    <p id="stat-today-net" class="text-2xl sm:text-3xl font-extrabold mt-2">0 ฿</p>
+                    <p class="text-xs text-indigo-100 mt-1">ยอดฝากวันนี้ - ยอดถอนวันนี้</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex overflow-x-auto bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 gap-1.5">
+                <button onclick="switchTeacherTab('bulk')" id="tab-btn-bulk" class="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-indigo-600 text-white shadow-sm">
+                    <i class="ph-bold ph-coins text-base"></i> 1. บันทึกฝากเงินรายวัน
+                </button>
+                <button onclick="switchTeacherTab('students')" id="tab-btn-students" class="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-100">
+                    <i class="ph-bold ph-users-three text-base"></i> 2. จัดการรายชื่อนักเรียน
+                </button>
+                <button onclick="switchTeacherTab('history')" id="tab-btn-history" class="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-100">
+                    <i class="ph-bold ph-clock-counter-clockwise text-base"></i> 3. ประวัติ & ยกเลิกรายการ
+                </button>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 1: บันทึกฝากเงินแบบรวดเร็ว (BULK ENTRY)    -->
+            <!-- ========================================== -->
+            <div id="tab-content-bulk" class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3 bg-slate-50/60">
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg text-slate-800 flex items-center gap-2">
+                            <i class="ph-fill ph-check-square-offset text-indigo-600 text-xl"></i> ตารางรับฝากเงินประจำวัน (Bulk Deposit)
+                        </h3>
+                        <p class="text-xs text-slate-500">กดปุ่มลัด +5, +10, +20 หรือพิมพ์จำนวนเงินของนักเรียนที่มาฝาก แล้วกดปุ่มบันทึกด้านล่างครั้งเดียว</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <input type="text" id="bulk-note-input" placeholder="หมายเหตุ (เช่น ออมเงินค่าขนม)" value="ออมเงินประจำวัน"
+                            class="flex-1 sm:w-52 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button onclick="clearBulkInputs()" class="px-3 py-2 rounded-xl bg-slate-200/70 hover:bg-slate-300/70 text-slate-700 text-xs font-semibold transition">
+                            ล้างตัวเลข
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[640px]">
+                        <thead>
+                            <tr class="bg-slate-100/80 text-slate-600 text-xs uppercase">
+                                <th class="py-3 px-4 w-16 text-center">เลขที่</th>
+                                <th class="py-3 px-4">ชื่อ - นามสกุล</th>
+                                <th class="py-3 px-4 text-right">เงินออมสะสม</th>
+                                <th class="py-3 px-4 text-center">ปุ่มลัดเพิ่มยอดฝาก</th>
+                                <th class="py-3 px-4 w-44 text-right">ยอดฝากวันนี้ (บาท)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-student-tbody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Sticky Footer Summary for Bulk Save -->
+                <div class="p-4 sm:p-5 bg-indigo-50/80 border-t border-indigo-100 flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <span class="text-xs text-slate-500 block">จำนวนนักเรียนที่ฝาก</span>
+                            <span id="bulk-selected-count" class="text-lg font-bold text-indigo-700">0 คน</span>
+                        </div>
+                        <div class="h-8 w-px bg-indigo-200"></div>
+                        <div>
+                            <span class="text-xs text-slate-500 block">รวมยอดเงินที่จะบันทึก</span>
+                            <span id="bulk-total-amount" class="text-2xl font-extrabold text-emerald-600">0 บาท</span>
+                        </div>
+                    </div>
+                    <button onclick="submitBulkDeposit()" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold shadow-lg shadow-emerald-200 transition transform active:scale-95 flex items-center justify-center gap-2 text-base">
+                        <i class="ph-bold ph-floppy-disk text-xl"></i> บันทึกยอดเงินฝากทั้งหมด
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 2: จัดการรายชื่อนักเรียน (MANAGE STUDENTS) -->
+            <!-- ========================================== -->
+            <div id="tab-content-students" class="hidden bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg text-slate-800 flex items-center gap-2">
+                            <i class="ph-fill ph-identification-badge text-indigo-600 text-xl"></i> รายชื่อนักเรียนในห้องเรียน
+                        </h3>
+                        <p class="text-xs text-slate-500">สามารถแก้ไขข้อมูล รหัส PIN เป้าหมายการออม หรือลบรายชื่อนักเรียนได้</p>
+                    </div>
+                    <button onclick="openStudentModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5">
+                        <i class="ph-bold ph-plus"></i> เพิ่มนักเรียนใหม่
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto pb-2">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase whitespace-nowrap">
+                                <th class="py-3.5 px-4 text-center">เลขที่</th>
+                                <th class="py-3.5 px-4">รหัสนักเรียน</th>
+                                <th class="py-3.5 px-4">ชื่อ - นามสกุล</th>
+                                <th class="py-3.5 px-4">ชั้นเรียน</th>
+                                <th class="py-3.5 px-4 text-center">รหัส PIN</th>
+                                <th class="py-3.5 px-4">เป้าหมายการออม</th>
+                                <th class="py-3.5 px-4 text-right">ยอดคงเหลือ</th>
+                                <th class="py-3.5 px-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manage-student-tbody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 3: ประวัติธุรกรรม & ยกเลิกรายการ (HISTORY) -->
+            <!-- ========================================== -->
+            <div id="tab-content-history" class="hidden bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg text-slate-800 flex items-center gap-2">
+                            <i class="ph-fill ph-receipt text-indigo-600 text-xl"></i> ประวัติการฝาก-ถอนทั้งหมด
+                        </h3>
+                        <p class="text-xs text-slate-500">หากคุณครูบันทึกรายการผิด สามารถกดปุ่ม "ยกเลิก (Void)" เพื่อคืนยอดเงินอัตโนมัติ</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto pb-2">
+                    <table class="w-full text-left border-collapse min-w-[720px]">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase whitespace-nowrap">
+                                <th class="py-3.5 px-4">วัน-เวลา</th>
+                                <th class="py-3.5 px-4">รหัสรายการ</th>
+                                <th class="py-3.5 px-4">นักเรียน</th>
+                                <th class="py-3.5 px-4">ประเภท</th>
+                                <th class="py-3.5 px-4">หมายเหตุ</th>
+                                <th class="py-3.5 px-4 text-right">จำนวนเงิน</th>
+                                <th class="py-3.5 px-4">ครูผู้บันทึก</th>
+                                <th class="py-3.5 px-4 text-center">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-tx-tbody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-5 text-center text-sm font-medium text-slate-500 border-t border-slate-200 bg-white">
+        ผู้จัดทำ : นางสาวปรารถนา สุวรรณพันธ์
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- MODALS                                     -->
+    <!-- ========================================== -->
+
+    <!-- 1. Modal เพิ่ม/แก้ไข นักเรียน -->
+    <div id="studentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 id="student-modal-title" class="font-bold text-lg text-indigo-700 flex items-center gap-2">
+                    <i class="ph-bold ph-user-plus"></i> เพิ่มรายชื่อนักเรียนใหม่
+                </h3>
+                <button onclick="closeModal('studentModal')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+
+            <input type="hidden" id="stu-form-mode" value="add">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสประจำตัวนักเรียน *</label>
+                    <input type="text" id="stu-form-id" placeholder="เช่น 1003" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสลับ PIN (4 หลัก) *</label>
+                    <input type="text" id="stu-form-pin" maxlength="4" value="1111" placeholder="เช่น 1111" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ - นามสกุล *</label>
+                    <input type="text" id="stu-form-name" placeholder="เช่น ด.ช. ขยัน ออมทรัพย์" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชั้นเรียน</label>
+                    <input type="text" id="stu-form-room" value="ป.5" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">เลขที่</label>
+                    <input type="number" id="stu-form-number" min="1" value="1" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ไอคอนประจำตัว</label>
+                    <select id="stu-form-avatar" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="👦">👦 เด็กชาย</option>
+                        <option value="👧">👧 เด็กหญิง</option>
+                        <option value="🐼">🐼 แพนด้า</option>
+                        <option value="🐰">🐰 กระต่าย</option>
+                        <option value="🦁">🦁 สิงโต</option>
+                        <option value="🐱">🐱 แมวเหมียว</option>
+                        <option value="🐶">🐶 ลูกสุนัข</option>
+                        <option value="🦊">🦊 จิ้งจอก</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนเงินเป้าหมาย (บาท)</label>
+                    <input type="number" id="stu-form-goal-target" min="10" value="300" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อเป้าหมายการออม</label>
+                    <input type="text" id="stu-form-goal-title" value="เก็บออมเพื่อการศึกษา" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-3 border-t border-slate-100">
+                <button onclick="closeModal('studentModal')" class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">ยกเลิก</button>
+                <button onclick="saveStudentForm()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md">บันทึกข้อมูลนักเรียน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Modal ถอนเงินนักเรียน -->
+    <div id="withdrawModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-lg text-rose-600 flex items-center gap-2">
+                    <i class="ph-bold ph-hand-withdraw"></i> บันทึกการถอนเงินนักเรียน
+                </h3>
+                <button onclick="closeModal('withdrawModal')" class="text-slate-400 hover:text-slate-600"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+
+            <div class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">เลือกนักเรียนที่ต้องการถอนเงิน</label>
+                    <select id="withdraw-student-select" onchange="updateWithdrawBalanceHint()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
+                        <!-- Injected by JS -->
+                    </select>
+                    <p id="withdraw-balance-hint" class="text-xs text-slate-500 mt-1">ยอดเงินคงเหลือที่ถอนได้: 0 บาท</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนเงินที่ถอน (บาท)</label>
+                    <input type="number" id="withdraw-amount-input" min="1" placeholder="ระบุจำนวนเงิน" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-lg text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">เหตุผลการถอน / หมายเหตุ</label>
+                    <input type="text" id="withdraw-note-input" placeholder="เช่น ถอนไปซื้ออุปกรณ์การเรียน" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400">
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('withdrawModal')" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold">ยกเลิก</button>
+                <button onclick="submitWithdraw()" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-md">ยืนยันการถอนเงิน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Modal ยืนยันการลบนักเรียน / ยกเลิกรายการ (แทน confirm()) -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+            <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center text-3xl">
+                <i class="ph-bold ph-warning"></i>
+            </div>
+            <h3 id="confirm-modal-title" class="font-bold text-lg text-slate-800">ยืนยันการทำรายการ?</h3>
+            <p id="confirm-modal-desc" class="text-sm text-slate-500">คุณแน่ใจหรือไม่ที่จะดำเนินการนี้</p>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal('confirmModal')" class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">ยกเลิก</button>
+                <button id="confirm-modal-btn" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay Spinner -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex-col items-center justify-center">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3">
+            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p id="loadingText" class="font-bold text-slate-700">กำลังเชื่อมต่อฐานข้อมูล...</p>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification -->
+    <div id="toastBox" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300">
+        <div id="toastInner" class="px-5 py-3.5 rounded-2xl shadow-xl text-white font-medium flex items-center gap-2.5">
+            <i id="toastIcon" class="ph-fill ph-check-circle text-xl"></i>
+            <span id="toastMessage">บันทึกสำเร็จ!</span>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT LOGIC                           -->
+    <!-- ========================================== -->
+    <script>
+        // ============================================
+        // การตั้งค่า SUPABASE และข้อมูลคุณครู
+        // ============================================
+        const SUPABASE_URL = "https://bhflrnxnelzlxezhzprq.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_cfE0v44WNExDfKQtMWuPcw_m2Bp48jR";
+
+        const TEACHER_ACCOUNT = {
+            username: "190143",
+            password: "190143",
+            fullName: "นางสาวปรารถนา สุวรรณพันธ์"
+        };
+
+        let supabaseClient = null;
+        let isTeacherLoggedIn = false;
+        let studentsData = [];
+        let transactionsData = [];
+        let bulkAmounts = {}; // เก็บยอดเงินที่กรอกในตารางฝากรายวัน { studentId: amount }
+
+        // --- 1. INITIALIZATION & SUPABASE CONNECTION ---
+        window.onload = function () {
+            connectSupabase();
+        };
+
+        function updateDbBadge(isOnline, text) {
+            const badge = document.getElementById('db-status-badge');
+            if (!badge) return;
+            if (isOnline) {
+                badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ${text}`;
+            } else {
+                badge.className = "px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 flex items-center gap-1.5";
+                badge.innerHTML = `<i class="ph-bold ph-warning"></i> ${text}`;
+            }
+        }
+
+        async function connectSupabase() {
+            try {
+                showLoading("กำลังซิงค์ข้อมูลกับ Supabase...");
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+                let [stuRes, accRes, txRes] = await Promise.all([
+                    supabaseClient.from('Students').select('*').order('number', { ascending: true }),
+                    supabaseClient.from('Accounts').select('*'),
+                    supabaseClient.from('Transactions').select('*').order('timestamp', { ascending: false })
+                ]);
+
+                if (stuRes.error) throw stuRes.error;
+                if (accRes.error) throw accRes.error;
+                if (txRes.error) throw txRes.error;
+
+                studentsData = (stuRes.data || []).map(stu => {
+                    const acc = (accRes.data || []).find(a => String(a.studentId).trim() === String(stu.studentId).trim());
+                    return {
+                        studentId: String(stu.studentId).trim(),
+                        pin: String(stu.pin || '1111').trim(),
+                        name: stu.name,
+                        room: stu.room || 'ป.5',
+                        number: Number(stu.number) || 1,
+                        avatar: stu.avatar || '👦',
+                        goalTitle: stu.goalTitle || 'เก็บออมเพื่อการศึกษา',
+                        goalTarget: Number(stu.goalTarget) || 300,
+                        balance: acc ? Number(acc.balance) : 0
+                    };
+                });
+
+                transactionsData = (txRes.data || []).map(tx => ({
+                    ...tx,
+                    studentId: String(tx.studentId).trim(),
+                    amount: Number(tx.amount) || 0
+                }));
+
+                hideLoading();
+                updateDbBadge(true, "เชื่อมต่อ Supabase สำเร็จ");
+
+                if (isTeacherLoggedIn) {
+                    renderAllTeacherViews();
+                }
+            } catch (err) {
+                hideLoading();
+                console.error("Supabase Connection Error:", err);
+                updateDbBadge(false, "เชื่อมต่อฐานข้อมูลล้มเหลว");
+                showToast("เกิดข้อผิดพลาดในการดึงข้อมูล: " + (err.message || err), "error");
+            }
+        }
+
+        // --- 2. TEACHER AUTHENTICATION ---
+        function loginTeacher() {
+            const userInp = document.getElementById('teacher-user-input').value.trim();
+            const passInp = document.getElementById('teacher-pass-input').value.trim();
+
+            if (userInp === TEACHER_ACCOUNT.username && passInp === TEACHER_ACCOUNT.password) {
+                isTeacherLoggedIn = true;
+                document.getElementById('teacher-login-section').classList.add('hidden');
+                document.getElementById('teacher-dashboard-section').classList.remove('hidden');
+                document.getElementById('btn-logout-teacher').classList.remove('hidden');
+                renderAllTeacherViews();
+                showToast(`ยินดีต้อนรับ ${TEACHER_ACCOUNT.fullName}`, "success");
+            } else {
+                showToast("ชื่อผู้ใช้งาน หรือ รหัสผ่าน ไม่ถูกต้อง!", "error");
+            }
+        }
+
+        function logoutTeacher() {
+            isTeacherLoggedIn = false;
+            document.getElementById('teacher-pass-input').value = '';
+            document.getElementById('teacher-dashboard-section').classList.add('hidden');
+            document.getElementById('btn-logout-teacher').classList.add('hidden');
+            document.getElementById('teacher-login-section').classList.remove('hidden');
+        }
+
+        function switchTeacherTab(tab) {
+            const tabs = ['bulk', 'students', 'history'];
+            tabs.forEach(t => {
+                const content = document.getElementById(`tab-content-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tab) {
+                    content.classList.remove('hidden');
+                    btn.className = "flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-indigo-600 text-white shadow-sm";
+                } else {
+                    content.classList.add('hidden');
+                    btn.className = "flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-100";
+                }
+            });
+        }
+
+        // --- 3. RENDER DASHBOARD & TABLES ---
+        function renderAllTeacherViews() {
+            renderSummaryStats();
+            renderBulkTable();
+            renderManageStudentsTable();
+            renderHistoryTable();
+        }
+
+        function renderSummaryStats() {
+            const totalBalance = studentsData.reduce((sum, s) => sum + (Number(s.balance) || 0), 0);
+            document.getElementById('stat-total-balance').textContent = `${totalBalance.toLocaleString()} ฿`;
+            document.getElementById('stat-student-count').textContent = `นักเรียนทั้งหมด ${studentsData.length} คน`;
+
+            // คำนวณยอดวันนี้
+            const todayStr = new Date().toLocaleDateString('th-TH');
+            const todayTxs = transactionsData.filter(tx => {
+                if (tx.status === 'VOIDED') return false;
+                const txDateStr = new Date(tx.timestamp).toLocaleDateString('th-TH');
+                return txDateStr === todayStr;
+            });
+
+            const todayDeps = todayTxs.filter(t => t.type === 'DEPOSIT');
+            const todayWits = todayTxs.filter(t => t.type === 'WITHDRAW');
+
+            const sumDep = todayDeps.reduce((sum, t) => sum + t.amount, 0);
+            const sumWit = todayWits.reduce((sum, t) => sum + t.amount, 0);
+            const netCash = sumDep - sumWit;
+
+            document.getElementById('stat-today-deposit').textContent = `+${sumDep.toLocaleString()} ฿`;
+            document.getElementById('stat-today-dep-count').textContent = `${todayDeps.length} รายการวันนี้`;
+
+            document.getElementById('stat-today-withdraw').textContent = `-${sumWit.toLocaleString()} ฿`;
+            document.getElementById('stat-today-wit-count').textContent = `${todayWits.length} รายการวันนี้`;
+
+            document.getElementById('stat-today-net').textContent = `${netCash.toLocaleString()} ฿`;
+        }
+
+        // --- TAB 1: BULK DEPOSIT ---
+        function renderBulkTable() {
+            const tbody = document.getElementById('bulk-student-tbody');
+            if (studentsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-slate-400">ยังไม่มีรายชื่อนักเรียน กรุณากดปุ่ม "เพิ่มนักเรียนใหม่"</td></tr>`;
+                updateBulkSummary();
+                return;
+            }
+
+            tbody.innerHTML = studentsData.map(stu => {
+                const currentVal = bulkAmounts[stu.studentId] || '';
+                return `
+                    <tr class="hover:bg-indigo-50/40 transition">
+                        <td class="py-3 px-4 text-center font-bold text-slate-500">${stu.number}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-2xl">${stu.avatar || '👦'}</span>
+                                <div>
+                                    <p class="font-bold text-slate-800 leading-tight">${stu.name}</p>
+                                    <p class="text-xs text-slate-400">รหัส: ${stu.studentId} | ชั้น ${stu.room}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 text-right font-bold text-slate-700">${stu.balance.toLocaleString()} ฿</td>
+                        <td class="py-3 px-4 text-center">
+                            <div class="inline-flex items-center gap-1">
+                                <button type="button" onclick="addQuickAmount('${stu.studentId}', 5)" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition active:scale-95">+5</button>
+                                <button type="button" onclick="addQuickAmount('${stu.studentId}', 10)" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition active:scale-95">+10</button>
+                                <button type="button" onclick="addQuickAmount('${stu.studentId}', 20)" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition active:scale-95">+20</button>
+                                <button type="button" onclick="addQuickAmount('${stu.studentId}', 50)" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs border border-amber-200 transition active:scale-95">+50</button>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <div class="relative inline-block w-36">
+                                <input type="number" min="0" id="bulk-inp-${stu.studentId}" value="${currentVal}" placeholder="0"
+                                    oninput="onBulkInputChange('${stu.studentId}', this.value)"
+                                    class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-right font-extrabold text-base text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white">
+                                <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">฿</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            updateBulkSummary();
+        }
+
+        function addQuickAmount(studentId, addVal) {
+            const current = Number(bulkAmounts[studentId]) || 0;
+            const nextVal = current + addVal;
+            bulkAmounts[studentId] = nextVal;
+            const inp = document.getElementById(`bulk-inp-${studentId}`);
+            if (inp) inp.value = nextVal;
+            updateBulkSummary();
+        }
+
+        function onBulkInputChange(studentId, val) {
+            const num = Number(val);
+            if (num > 0) {
+                bulkAmounts[studentId] = num;
+            } else {
+                delete bulkAmounts[studentId];
+            }
+            updateBulkSummary();
+        }
+
+        function clearBulkInputs() {
+            bulkAmounts = {};
+            renderBulkTable();
+        }
+
+        function updateBulkSummary() {
+            const entries = Object.entries(bulkAmounts).filter(([_, amt]) => Number(amt) > 0);
+            const totalAmt = entries.reduce((sum, [_, amt]) => sum + Number(amt), 0);
+
+            document.getElementById('bulk-selected-count').textContent = `${entries.length} คน`;
+            document.getElementById('bulk-total-amount').textContent = `${totalAmt.toLocaleString()} บาท`;
+        }
+
+        async function submitBulkDeposit() {
+            const entries = Object.entries(bulkAmounts).filter(([_, amt]) => Number(amt) > 0);
+            if (entries.length === 0) {
+                return showToast("กรุณากรอกจำนวนเงินฝากอย่างน้อย 1 คนครับ", "error");
+            }
+
+            const note = document.getElementById('bulk-note-input').value.trim() || "ออมเงินประจำวัน";
+            const timestamp = new Date().toISOString();
+
+            showLoading("กำลังบันทึกยอดเงินฝากลง Supabase...");
+            try {
+                const txRows = [];
+                const accRows = [];
+
+                for (const [studentId, amount] of entries) {
+                    const stu = studentsData.find(s => s.studentId === studentId);
+                    if (!stu) continue;
+
+                    const numAmt = Number(amount);
+                    const newBalance = (Number(stu.balance) || 0) + numAmt;
+                    const txId = "TX-" + Date.now().toString().slice(-5) + Math.floor(100 + Math.random() * 900);
+
+                    txRows.push({
+                        txId,
+                        studentId,
+                        type: 'DEPOSIT',
+                        amount: numAmt,
+                        timestamp,
+                        teacher: TEACHER_ACCOUNT.fullName,
+                        note,
+                        status: 'ACTIVE'
+                    });
+
+                    accRows.push({
+                        studentId,
+                        balance: newBalance,
+                        updatedAt: timestamp
+                    });
+                }
+
+                const { error: accErr } = await supabaseClient.from('Accounts').upsert(accRows);
+                if (accErr) throw accErr;
+
+                const { error: txErr } = await supabaseClient.from('Transactions').insert(txRows);
+                if (txErr) throw txErr;
+
+                bulkAmounts = {};
+                await connectSupabase();
+                showToast(`บันทึกเงินฝากสำเร็จ ${entries.length} รายการ!`, "success");
+            } catch (err) {
+                hideLoading();
+                console.error(err);
+                showToast("บันทึกไม่สำเร็จ: " + (err.message || err), "error");
+            }
+        }
+
+        // --- TAB 2: MANAGE STUDENTS (ADD / EDIT / DELETE) ---
+        function renderManageStudentsTable() {
+            const tbody = document.getElementById('manage-student-tbody');
+            if (studentsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-10 text-center text-slate-400">ยังไม่มีรายชื่อนักเรียน</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = studentsData.map(stu => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-4 text-center font-bold text-slate-600">${stu.number}</td>
+                    <td class="py-3 px-4 font-bold text-indigo-600">${stu.studentId}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">${stu.avatar || '👦'}</span>
+                            <span class="font-bold text-slate-800">${stu.name}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-slate-600">${stu.room}</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-mono font-bold text-xs text-slate-700">${stu.pin}</span>
+                    </td>
+                    <td class="py-3 px-4 text-xs text-slate-600">
+                        <p class="font-semibold text-slate-700">${stu.goalTitle}</p>
+                        <p class="text-slate-400">เป้าหมาย ${stu.goalTarget.toLocaleString()} ฿</p>
+                    </td>
+                    <td class="py-3 px-4 text-right font-extrabold text-emerald-600">${stu.balance.toLocaleString()} ฿</td>
+                    <td class="py-3 px-4 text-center whitespace-nowrap">
+                        <button onclick="openStudentModal('${stu.studentId}')" class="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold text-xs mr-1 transition">
+                            <i class="ph-bold ph-pencil-simple"></i> แก้ไข
+                        </button>
+                        <button onclick="confirmDeleteStudent('${stu.studentId}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold text-xs transition">
+                            <i class="ph-bold ph-trash"></i> ลบ
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openStudentModal(studentId = null) {
+            const modeInp = document.getElementById('stu-form-mode');
+            const idInp = document.getElementById('stu-form-id');
+            const titleEl = document.getElementById('student-modal-title');
+
+            if (studentId) {
+                const stu = studentsData.find(s => s.studentId === studentId);
+                if (!stu) return;
+                modeInp.value = 'edit';
+                titleEl.innerHTML = `<i class="ph-bold ph-pencil-simple"></i> แก้ไขข้อมูลนักเรียน (${stu.studentId})`;
+                idInp.value = stu.studentId;
+                idInp.disabled = true;
+                idInp.classList.add('opacity-60');
+
+                document.getElementById('stu-form-pin').value = stu.pin;
+                document.getElementById('stu-form-name').value = stu.name;
+                document.getElementById('stu-form-room').value = stu.room;
+                document.getElementById('stu-form-number').value = stu.number;
+                document.getElementById('stu-form-avatar').value = stu.avatar || '👦';
+                document.getElementById('stu-form-goal-title').value = stu.goalTitle;
+                document.getElementById('stu-form-goal-target').value = stu.goalTarget;
+            } else {
+                modeInp.value = 'add';
+                titleEl.innerHTML = `<i class="ph-bold ph-user-plus"></i> เพิ่มรายชื่อนักเรียนใหม่`;
+                idInp.disabled = false;
+                idInp.classList.remove('opacity-60');
+
+                const nextNum = studentsData.length > 0 ? Math.max(...studentsData.map(s => s.number)) + 1 : 1;
+                const nextId = String(1000 + nextNum);
+
+                idInp.value = nextId;
+                document.getElementById('stu-form-pin').value = "1111";
+                document.getElementById('stu-form-name').value = "";
+                document.getElementById('stu-form-room').value = "ป.5";
+                document.getElementById('stu-form-number').value = nextNum;
+                document.getElementById('stu-form-avatar').value = "👦";
+                document.getElementById('stu-form-goal-title').value = "เก็บออมเพื่อการศึกษา";
+                document.getElementById('stu-form-goal-target').value = 300;
+            }
+
+            openModal('studentModal');
+        }
+
+        async function saveStudentForm() {
+            const mode = document.getElementById('stu-form-mode').value;
+            const studentId = document.getElementById('stu-form-id').value.trim();
+            const pin = document.getElementById('stu-form-pin').value.trim() || "1111";
+            const name = document.getElementById('stu-form-name').value.trim();
+            const room = document.getElementById('stu-form-room').value.trim() || "ป.5";
+            const number = Number(document.getElementById('stu-form-number').value) || 1;
+            const avatar = document.getElementById('stu-form-avatar').value;
+            const goalTitle = document.getElementById('stu-form-goal-title').value.trim() || "เป้าหมายการออม";
+            const goalTarget = Number(document.getElementById('stu-form-goal-target').value) || 300;
+
+            if (!studentId || !name) {
+                return showToast("กรุณากรอกรหัสนักเรียนและชื่อ-นามสกุลให้ครบถ้วน", "error");
+            }
+
+            if (mode === 'add' && studentsData.some(s => s.studentId === studentId)) {
+                return showToast("รหัสนักเรียนนี้มีอยู่ในระบบแล้ว", "error");
+            }
+
+            showLoading("กำลังบันทึกข้อมูลนักเรียน...");
+            try {
+                const studentRow = { studentId, pin, name, room, number, avatar, goalTitle, goalTarget };
+                const { error: stuErr } = await supabaseClient.from('Students').upsert([studentRow]);
+                if (stuErr) throw stuErr;
+
+                if (mode === 'add') {
+                    const { error: accErr } = await supabaseClient.from('Accounts').upsert([{
+                        studentId,
+                        balance: 0,
+                        updatedAt: new Date().toISOString()
+                    }]);
+                    if (accErr) throw accErr;
+                }
+
+                closeModal('studentModal');
+                await connectSupabase();
+                showToast(mode === 'add' ? "เพิ่มนักเรียนใหม่เรียบร้อยแล้ว!" : "อัปเดตข้อมูลนักเรียนสำเร็จ!", "success");
+            } catch (err) {
+                hideLoading();
+                console.error(err);
+                showToast("บันทึกข้อมูลนักเรียนไม่สำเร็จ: " + (err.message || err), "error");
+            }
+        }
+
+        function confirmDeleteStudent(studentId) {
+            const stu = studentsData.find(s => s.studentId === studentId);
+            if (!stu) return;
+
+            document.getElementById('confirm-modal-title').textContent = `ลบชื่อ ${stu.name}?`;
+            document.getElementById('confirm-modal-desc').textContent = `รหัสนักเรียน ${stu.studentId} รวมถึงยอดเงินและประวัติการฝาก-ถอนของนักเรียนคนนี้จะถูกลบออกจากระบบทั้งหมด`;
+            const btn = document.getElementById('confirm-modal-btn');
+            btn.onclick = () => executeDeleteStudent(studentId);
+            openModal('confirmModal');
+        }
+
+        async function executeDeleteStudent(studentId) {
+            closeModal('confirmModal');
+            showLoading("กำลังลบข้อมูลนักเรียน...");
+            try {
+                const { error } = await supabaseClient.from('Students').delete().eq('studentId', studentId);
+                if (error) throw error;
+
+                await connectSupabase();
+                showToast("ลบข้อมูลนักเรียนเรียบร้อยแล้ว", "success");
+            } catch (err) {
+                hideLoading();
+                showToast("ลบไม่สำเร็จ: " + (err.message || err), "error");
+            }
+        }
+
+        // --- WITHDRAW WORKFLOW ---
+        function openWithdrawModal() {
+            const select = document.getElementById('withdraw-student-select');
+            if (studentsData.length === 0) {
+                return showToast("ยังไม่มีรายชื่อนักเรียนในระบบ", "error");
+            }
+
+            select.innerHTML = studentsData.map(s => `
+                <option value="${s.studentId}">เลขที่ ${s.number} - ${s.name} (คงเหลือ ${s.balance.toLocaleString()} ฿)</option>
+            `).join('');
+
+            document.getElementById('withdraw-amount-input').value = '';
+            document.getElementById('withdraw-note-input').value = '';
+            updateWithdrawBalanceHint();
+            openModal('withdrawModal');
+        }
+
+        function updateWithdrawBalanceHint() {
+            const sid = document.getElementById('withdraw-student-select').value;
+            const stu = studentsData.find(s => s.studentId === sid);
+            const hint = document.getElementById('withdraw-balance-hint');
+            if (stu) {
+                hint.textContent = `ยอดเงินคงเหลือที่ถอนได้สูงสุด: ${stu.balance.toLocaleString()} บาท`;
+            }
+        }
+
+        async function submitWithdraw() {
+            const studentId = document.getElementById('withdraw-student-select').value;
+            const amount = Number(document.getElementById('withdraw-amount-input').value);
+            const note = document.getElementById('withdraw-note-input').value.trim() || "ถอนเงินออม";
+
+            const stu = studentsData.find(s => s.studentId === studentId);
+            if (!stu) return;
+
+            if (!amount || amount <= 0) {
+                return showToast("กรุณาระบุจำนวนเงินที่ต้องการถอนให้ถูกต้อง", "error");
+            }
+            if (amount > stu.balance) {
+                return showToast(`ยอดเงินคงเหลือของ ${stu.name} ไม่เพียงพอ (${stu.balance} บาท)`, "error");
+            }
+
+            showLoading("กำลังบันทึกการถอนเงิน...");
+            try {
+                const timestamp = new Date().toISOString();
+                const newBalance = stu.balance - amount;
+                const txId = "TX-" + Date.now().toString().slice(-5) + Math.floor(100 + Math.random() * 900);
+
+                const { error: accErr } = await supabaseClient.from('Accounts').upsert([{
+                    studentId,
+                    balance: newBalance,
+                    updatedAt: timestamp
+                }]);
+                if (accErr) throw accErr;
+
+                const { error: txErr } = await supabaseClient.from('Transactions').insert([{
+                    txId,
+                    studentId,
+                    type: 'WITHDRAW',
+                    amount,
+                    timestamp,
+                    teacher: TEACHER_ACCOUNT.fullName,
+                    note,
+                    status: 'ACTIVE'
+                }]);
+                if (txErr) throw txErr;
+
+                closeModal('withdrawModal');
+                await connectSupabase();
+                showToast(`บันทึกการถอนเงิน ${amount.toLocaleString()} บาท เรียบร้อยแล้ว`, "success");
+            } catch (err) {
+                hideLoading();
+                showToast("ถอนเงินไม่สำเร็จ: " + (err.message || err), "error");
+            }
+        }
+
+        // --- TAB 3: TRANSACTION HISTORY & VOID ---
+        function renderHistoryTable() {
+            const tbody = document.getElementById('teacher-tx-tbody');
+            if (transactionsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-10 text-center text-slate-400">ยังไม่มีประวัติการทำธุรกรรม</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = transactionsData.map(tx => {
+                const stu = studentsData.find(s => s.studentId === tx.studentId);
+                const stuName = stu ? `${stu.avatar} ${stu.name}` : `รหัส ${tx.studentId}`;
+                const isDep = tx.type === 'DEPOSIT';
+                const isVoid = tx.status === 'VOIDED';
+
+                return `
+                    <tr class="${isVoid ? 'bg-slate-50 opacity-50 line-through' : 'hover:bg-slate-50/80'}">
+                        <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">${formatDateTime(tx.timestamp)}</td>
+                        <td class="py-3 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">${tx.txId}</td>
+                        <td class="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">${stuName}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${isDep ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                                ${isDep ? '➕ ฝากเงิน' : '➖ ถอนเงิน'}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600">${tx.note || '-'}</td>
+                        <td class="py-3 px-4 text-right font-extrabold whitespace-nowrap ${isDep ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${isDep ? '+' : '-'}${tx.amount.toLocaleString()} ฿
+                        </td>
+                        <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">${tx.teacher || '-'}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            ${isVoid
+                                ? `<span class="text-xs font-semibold text-slate-400">ยกเลิกแล้ว</span>`
+                                : `<button onclick="confirmVoidTx('${tx.txId}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-semibold text-xs transition">
+                                    <i class="ph-bold ph-arrow-u-up-left"></i> ยกเลิก (Void)
+                                   </button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function confirmVoidTx(txId) {
+            const tx = transactionsData.find(t => t.txId === txId);
+            if (!tx) return;
+
+            document.getElementById('confirm-modal-title').textContent = `ยกเลิกรายการ ${tx.txId}?`;
+            document.getElementById('confirm-modal-desc').textContent = `ระบบจะทำการยกเลิกรายการจำนวน ${tx.amount.toLocaleString()} บาท และปรับปรุงยอดเงินคงเหลือของนักเรียนกลับคืนโดยอัตโนมัติ`;
+            const btn = document.getElementById('confirm-modal-btn');
+            btn.onclick = () => executeVoidTx(txId);
+            openModal('confirmModal');
+        }
+
+        async function executeVoidTx(txId) {
+            closeModal('confirmModal');
+            const tx = transactionsData.find(t => t.txId === txId);
+            if (!tx || tx.status === 'VOIDED') return;
+
+            const stu = studentsData.find(s => s.studentId === tx.studentId);
+            if (!stu) return showToast("ไม่พบข้อมูลนักเรียนของรายการนี้", "error");
+
+            const revertedBalance = tx.type === 'DEPOSIT'
+                ? stu.balance - tx.amount
+                : stu.balance + tx.amount;
+
+            if (revertedBalance < 0) {
+                return showToast("ไม่สามารถยกเลิกรายการฝากนี้ได้ เนื่องจากจะทำให้ยอดเงินคงเหลือติดลบ", "error");
+            }
+
+            showLoading("กำลังยกเลิกรายการและปรับยอดเงิน...");
+            try {
+                const { error: txErr } = await supabaseClient.from('Transactions').update({ status: 'VOIDED' }).eq('txId', txId);
+                if (txErr) throw txErr;
+
+                const { error: accErr } = await supabaseClient.from('Accounts').update({
+                    balance: revertedBalance,
+                    updatedAt: new Date().toISOString()
+                }).eq('studentId', stu.studentId);
+                if (accErr) throw accErr;
+
+                await connectSupabase();
+                showToast("ยกเลิกรายการและคืนยอดเงินเรียบร้อยแล้ว", "success");
+            } catch (err) {
+                hideLoading();
+                showToast("ยกเลิกรายการไม่สำเร็จ: " + (err.message || err), "error");
+            }
+        }
+
+        // --- UI UTILITIES ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function showLoading(text) { document.getElementById('loadingText').textContent = text || "กำลังประมวลผล..."; document.getElementById('loadingOverlay').classList.remove('hidden'); document.getElementById('loadingOverlay').classList.add('flex'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); document.getElementById('loadingOverlay').classList.remove('flex'); }
+        function showToast(msg, type = "success") {
+            const box = document.getElementById('toastBox'), inner = document.getElementById('toastInner'), icon = document.getElementById('toastIcon'), text = document.getElementById('toastMessage');
+            text.textContent = msg;
+            if (type === "error") { inner.className = "px-5 py-3.5 rounded-2xl shadow-xl bg-rose-600 text-white font-medium flex items-center gap-2.5"; icon.className = "ph-fill ph-warning-circle text-xl"; }
+            else { inner.className = "px-5 py-3.5 rounded-2xl shadow-xl bg-slate-900 text-white font-medium flex items-center gap-2.5"; icon.className = "ph-fill ph-check-circle text-emerald-400 text-xl"; }
+            box.classList.remove('hidden'); setTimeout(() => box.classList.add('hidden'), 3200);
+        }
+        function formatDateTime(isoStr) {
+            try { const d = new Date(isoStr); return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+            catch (e) { return isoStr; }
+        }
+    </script>
+</body>
+</html>
